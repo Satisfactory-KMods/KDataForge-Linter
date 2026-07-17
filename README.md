@@ -3,6 +3,10 @@
 Schema-driven validation for KDataForge packs. Windows and Linux releases include standalone CLI
 and graphical applications; Python is not required.
 
+> [!NOTE]
+> This project was written with substantial assistance from OpenAI Codex. See
+> [AI_DISCLOSURE.md](AI_DISCLOSURE.md) for scope and responsibility details.
+
 ## CLI
 
 ```text
@@ -41,4 +45,3 @@ uv run kdataforge-linter lint ../KPatchwork/DataForge
 
 Schemas live in `src/kdataforge_linter/schemas`. Schema-only changes alter validation without
 changing Python code.
-
