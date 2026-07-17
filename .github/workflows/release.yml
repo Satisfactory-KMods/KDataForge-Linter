@@ -42,6 +42,22 @@ jobs:
         with:
           version: "0.11.28"
           enable-cache: true
+      - name: Install Linux GUI runtime
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libegl1 \
+            libfontconfig1 \
+            libgl1 \
+            libxkbcommon-x11-0 \
+            libxcb-cursor0 \
+            libxcb-icccm4 \
+            libxcb-keysyms1 \
+            libxcb-shape0 \
+            libxcb-xinerama0 \
+            libxcb-xkb1
       - name: Set release version
         run: uv version "${{ needs.prepare.outputs.version }}"
       - run: uv sync --extra gui --group dev
