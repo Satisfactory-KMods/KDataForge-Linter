@@ -1,5 +1,5 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://kmods.dev/kdataforge-linter/schemas/pack.schema.yml
+$id: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/pack.schema.yml
 x-kdf-type: pack
 title: KDataForge pack manifest
 type: object
@@ -7,20 +7,20 @@ additionalProperties: false
 required: [ref, name, version, contributer]
 properties:
   ref:
-    $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/token
+    $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/token
   name:
-    $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+    $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
   version:
     type: string
     pattern: '^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$'
   contributer:
     oneOf:
-      - $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/token
+      - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/token
       - type: array
         minItems: 1
         uniqueItems: true
         items:
-          $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/token
+          $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/token
   priority:
     type: integer
     default: 100
@@ -31,14 +31,14 @@ properties:
     type: boolean
     default: false
   conditions:
-    $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/conditions
+    $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/conditions
   dependencies:
     type: array
     uniqueItems: true
     items:
-      $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/token
+      $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/token
   redirects:
     type: object
     additionalProperties:
-      $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/token
+      $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/token
 

@@ -1,9 +1,9 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://kmods.dev/kdataforge-linter/schemas/gametag.schema.yml
+$id: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/gametag.schema.yml
 x-kdf-type: gametag
 title: KDataForge gameplay tags
 allOf:
-  - $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/documentBase
+  - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/documentBase
   - type: object
     required: [tags]
     properties:
@@ -13,13 +13,13 @@ allOf:
         minItems: 1
         items:
           oneOf:
-            - $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+            - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
             - type: object
               additionalProperties: false
               required: [tag]
               properties:
                 tag:
-                  $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+                  $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
                 comment: { type: string }
 unevaluatedProperties: false
 

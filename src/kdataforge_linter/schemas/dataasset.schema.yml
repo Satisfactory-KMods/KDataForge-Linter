@@ -1,9 +1,9 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://kmods.dev/kdataforge-linter/schemas/dataasset.schema.yml
+$id: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/dataasset.schema.yml
 x-kdf-type: dataasset
 title: KDataForge primary data assets
 allOf:
-  - $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/documentBase
+  - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/documentBase
   - type: object
     required: [assets]
     properties:
@@ -17,10 +17,10 @@ allOf:
           required: [id, class]
           properties:
             id:
-              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/token
+              $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/token
             class:
-              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+              $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
             properties:
-              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/properties
+              $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/properties
 unevaluatedProperties: false
 

@@ -1,9 +1,9 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://kmods.dev/kdataforge-linter/schemas/curve.schema.yml
+$id: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/curve.schema.yml
 x-kdf-type: curve
 title: KDataForge curves
 allOf:
-  - $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/documentBase
+  - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/documentBase
   - type: object
     required: [curveType, curves]
     properties:
@@ -18,11 +18,11 @@ allOf:
           required: [keys]
           properties:
             id:
-              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/token
+              $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/token
             target:
-              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+              $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
             defaultValue:
-              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/numberOrVector
+              $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/numberOrVector
             preInfinityExtrap:
               enum: [none, constant, linear, cycle, cycleWithOffset, oscillate]
             postInfinityExtrap:
@@ -38,18 +38,18 @@ allOf:
                 properties:
                   time: { type: number }
                   value:
-                    $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/numberOrVector
+                    $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/numberOrVector
                   interpMode: { enum: [constant, linear, cubic] }
                   tangentMode: { enum: [auto, smartAuto, user, break] }
                   tangentWeightMode: { enum: [none, arrive, leave, both] }
                   arriveTangent:
-                    $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/numberOrVector
+                    $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/numberOrVector
                   leaveTangent:
-                    $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/numberOrVector
+                    $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/numberOrVector
                   arriveTangentWeight:
-                    $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/numberOrVector
+                    $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/numberOrVector
                   leaveTangentWeight:
-                    $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/numberOrVector
+                    $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/numberOrVector
           oneOf:
             - required: [id]
               not: { required: [target] }

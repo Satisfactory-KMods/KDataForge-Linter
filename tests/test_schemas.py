@@ -5,6 +5,11 @@ from pathlib import Path
 from kdataforge_linter.schema_registry import SchemaRegistry
 from kdataforge_linter.validator import lint_path
 
+GITHUB_SCHEMA_BASE = (
+    "https://raw.githubusercontent.com/Satisfactory-KMods/"
+    "KDataForge-Linter/main/src/kdataforge_linter/schemas/"
+)
+
 
 def test_all_builtin_schemas_load() -> None:
     registry = SchemaRegistry()
@@ -27,6 +32,13 @@ def test_all_builtin_schemas_load() -> None:
         "sinkpoints",
         "unlock",
     ]
+
+
+def test_builtin_schema_ids_use_github_raw_urls() -> None:
+    registry = SchemaRegistry()
+    assert registry._store
+    assert all(schema_id.startswith(GITHUB_SCHEMA_BASE) for schema_id in registry._store)
+    assert f"{GITHUB_SCHEMA_BASE}common.schema.yml" in registry._store
 
 
 def test_valid_pack_passes(valid_dataforge: Path) -> None:
