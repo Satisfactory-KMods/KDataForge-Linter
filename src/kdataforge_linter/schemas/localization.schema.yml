@@ -1,0 +1,28 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://kmods.dev/kdataforge-linter/schemas/localization.schema.yml
+x-kdf-type: localization
+title: KDataForge localization
+allOf:
+  - $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/documentBase
+  - type: object
+    required: [namespace, entries]
+    properties:
+      type: { const: localization }
+      namespace:
+        $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+      culture:
+        $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+      entries:
+        type: object
+        minProperties: 1
+        additionalProperties:
+          oneOf:
+            - type: string
+            - type: object
+              additionalProperties: false
+              required: [text]
+              properties:
+                source: { type: string }
+                text: { type: string, minLength: 1 }
+unevaluatedProperties: false
+

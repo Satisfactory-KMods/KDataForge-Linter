@@ -1,0 +1,63 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://kmods.dev/kdataforge-linter/schemas/schematic.schema.yml
+x-kdf-type: schematic
+title: KDataForge schematics
+allOf:
+  - $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/documentBase
+  - type: object
+    required: [schematics]
+    properties:
+      type: { const: schematic }
+      schematics:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            id:
+              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/token
+            class:
+              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+            parent:
+              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+            register: { type: boolean }
+            properties:
+              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/properties
+            unlocks:
+              type: array
+              items:
+                $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/instancedObject
+            dependencies:
+              type: array
+              items:
+                $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/instancedObject
+            recipes:
+              type: array
+              items:
+                $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+            schematics:
+              type: array
+              items:
+                $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+            handSlots: { type: integer, minimum: 1 }
+            inventorySlots: { type: integer, minimum: 1 }
+            scannableResources:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [resource]
+                properties:
+                  resource:
+                    $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+                  nodeType:
+                    enum: [Node, FrackingSatellite, FrackingCore, Geyser, Deposit]
+                    default: Node
+          oneOf:
+            - required: [id]
+              not: { required: [class] }
+            - required: [class]
+              not: { required: [id] }
+unevaluatedProperties: false
+

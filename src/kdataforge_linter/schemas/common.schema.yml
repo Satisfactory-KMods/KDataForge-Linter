@@ -1,0 +1,201 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml
+title: KDataForge shared schema definitions
+$defs:
+  nonEmptyString:
+    type: string
+    minLength: 1
+  token:
+    type: string
+    pattern: ^[A-Za-z][A-Za-z0-9_.-]*$
+  stringOrList:
+    oneOf:
+      - $ref: '#/$defs/nonEmptyString'
+      - type: array
+        minItems: 1
+        items:
+          $ref: '#/$defs/nonEmptyString'
+  conditions:
+    type: object
+    additionalProperties: false
+    properties:
+      gameVersion:
+        $ref: '#/$defs/nonEmptyString'
+      hasMod:
+        $ref: '#/$defs/stringOrList'
+      modVersion:
+        type: object
+        minProperties: 1
+        additionalProperties:
+          $ref: '#/$defs/nonEmptyString'
+      hasClass:
+        $ref: '#/$defs/stringOrList'
+  documentBase:
+    type: object
+    properties:
+      type:
+        $ref: '#/$defs/nonEmptyString'
+      debug:
+        type: boolean
+      conditions:
+        $ref: '#/$defs/conditions'
+      include:
+        $ref: '#/$defs/stringOrList'
+  propertyPath:
+    type: string
+    pattern: '^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*|\[(?:\d+|[A-Za-z0-9_ -]+|"[^"]+")\])*$'
+  operation:
+    type: object
+    additionalProperties: false
+    required: [path]
+    properties:
+      path:
+        $ref: '#/$defs/propertyPath'
+      op:
+        enum:
+          - add
+          - append
+          - clamp
+          - clear
+          - copy
+          - divide
+          - duplicate
+          - insert
+          - max
+          - min
+          - move
+          - multiply
+          - prepend
+          - remove
+          - remove_at
+          - replace
+          - reverse
+          - set
+          - sort
+          - subtract
+          - swap
+          - unique
+      value: {}
+      min:
+        type: number
+      max:
+        type: number
+      index:
+        type: integer
+      with:
+        type: integer
+      from:
+        $ref: '#/$defs/propertyPath'
+  properties:
+    type: array
+    minItems: 1
+    items:
+      $ref: '#/$defs/operation'
+  generatedEntry:
+    type: object
+    additionalProperties: false
+    properties:
+      id:
+        $ref: '#/$defs/token'
+      class:
+        $ref: '#/$defs/nonEmptyString'
+      parent:
+        $ref: '#/$defs/nonEmptyString'
+      register:
+        type: boolean
+      properties:
+        $ref: '#/$defs/properties'
+    oneOf:
+      - required: [id]
+        not:
+          required: [class]
+      - required: [class]
+        not:
+          required: [id]
+  instancedObject:
+    type: object
+    additionalProperties: false
+    required: [class]
+    properties:
+      class:
+        $ref: '#/$defs/nonEmptyString'
+      properties:
+        $ref: '#/$defs/properties'
+  coordinate:
+    type: object
+    additionalProperties: false
+    required: [X, Y]
+    properties:
+      X:
+        type: integer
+      Y:
+        type: integer
+  nodeReference:
+    oneOf:
+      - $ref: '#/$defs/coordinate'
+      - type: object
+        additionalProperties: false
+        required: [schematic]
+        properties:
+          schematic:
+            $ref: '#/$defs/nonEmptyString'
+  road:
+    type: object
+    additionalProperties: false
+    required: [key, points]
+    properties:
+      key:
+        $ref: '#/$defs/nodeReference'
+      points:
+        type: array
+        minItems: 2
+        items:
+          $ref: '#/$defs/coordinate'
+  researchNode:
+    type: object
+    additionalProperties: false
+    required: [schematic]
+    properties:
+      schematic:
+        $ref: '#/$defs/nonEmptyString'
+      class:
+        $ref: '#/$defs/nonEmptyString'
+      coordinate:
+        $ref: '#/$defs/coordinate'
+      parents:
+        type: array
+        items:
+          $ref: '#/$defs/nodeReference'
+      nodesToUnhide:
+        type: array
+        items:
+          $ref: '#/$defs/nodeReference'
+      unhiddenBy:
+        type: array
+        items:
+          $ref: '#/$defs/nodeReference'
+      childrenAndRoads:
+        oneOf:
+          - $ref: '#/$defs/road'
+          - type: array
+            minItems: 1
+            items:
+              $ref: '#/$defs/road'
+      properties:
+        $ref: '#/$defs/properties'
+  numberOrVector:
+    oneOf:
+      - type: number
+      - type: array
+        minItems: 3
+        maxItems: 3
+        items:
+          type: number
+      - type: object
+        additionalProperties: false
+        required: [X, Y, Z]
+        properties:
+          X: { type: number }
+          Y: { type: number }
+          Z: { type: number }
+

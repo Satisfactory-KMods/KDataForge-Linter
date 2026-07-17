@@ -1,0 +1,56 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://kmods.dev/kdataforge-linter/schemas/research.schema.yml
+x-kdf-type: research
+title: KDataForge research trees
+allOf:
+  - $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/documentBase
+  - type: object
+    required: [research]
+    properties:
+      type: { enum: [research, mam] }
+      research:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          additionalProperties: false
+          properties:
+            id:
+              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/token
+            class:
+              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+            parent:
+              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+            register: { type: boolean }
+            properties:
+              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/properties
+            autoPath: { type: boolean, default: false }
+            addNodes:
+              type: array
+              minItems: 1
+              items:
+                $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/researchNode
+            nodes:
+              type: array
+              minItems: 1
+              items:
+                $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/researchNode
+            removeNodes:
+              type: array
+              minItems: 1
+              items:
+                oneOf:
+                  - $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+                  - type: object
+                    additionalProperties: false
+                    required: [schematic]
+                    properties:
+                      schematic:
+                        $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+          oneOf:
+            - required: [id]
+              not: { required: [class] }
+            - required: [class]
+              not: { required: [id] }
+unevaluatedProperties: false
+

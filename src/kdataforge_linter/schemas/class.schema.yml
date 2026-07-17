@@ -1,0 +1,28 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://kmods.dev/kdataforge-linter/schemas/class.schema.yml
+x-kdf-type: class
+title: KDataForge generic classes
+allOf:
+  - $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/documentBase
+  - type: object
+    required: [classes]
+    properties:
+      type: { const: class }
+      classes:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          additionalProperties: false
+          required: [id, parent]
+          properties:
+            id:
+              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/token
+            parent:
+              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/nonEmptyString
+            registerAs:
+              enum: [recipe, schematic, research]
+            properties:
+              $ref: https://kmods.dev/kdataforge-linter/schemas/common.schema.yml#/$defs/properties
+unevaluatedProperties: false
+

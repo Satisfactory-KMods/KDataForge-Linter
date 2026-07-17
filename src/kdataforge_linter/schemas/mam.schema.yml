@@ -1,0 +1,6 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://kmods.dev/kdataforge-linter/schemas/mam.schema.yml
+x-kdf-type: mam
+title: KDataForge MAM alias
+$ref: https://kmods.dev/kdataforge-linter/schemas/research.schema.yml
+

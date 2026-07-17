@@ -1,0 +1,123 @@
+name: Build and release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - id: version
+        shell: bash
+        run: |
+          year=$(date -u +%Y)
+          month=$(date -u +%-m)
+          quarter=$(( (month - 1) / 3 + 1 ))
+          version="${year}.${quarter}.${GITHUB_RUN_NUMBER}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: KDataForge-Linter-Windows-x64
+          - os: ubuntu-22.04
+            artifact: KDataForge-Linter-Linux-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.28"
+          enable-cache: true
+      - name: Set release version
+        run: uv version "${{ needs.prepare.outputs.version }}"
+      - run: uv sync --extra gui --group dev
+      - run: uv run ruff check .
+      - run: uv run pytest
+      - name: Smoke test GUI module
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: >-
+          uv run python -c
+          "from PySide6.QtWidgets import QApplication; from kdataforge_linter.gui import MainWindow;
+          app=QApplication([]); window=MainWindow(); assert window.windowTitle() == 'KDataForge Linter'"
+      - name: Build CLI
+        run: >-
+          uv run pyinstaller --noconfirm --clean --onefile
+          --name kdataforge-linter
+          --collect-data kdataforge_linter
+          --copy-metadata kdataforge-linter
+          src/kdataforge_linter/cli.py
+      - name: Build GUI
+        run: >-
+          uv run pyinstaller --noconfirm --clean --onefile --windowed
+          --name KDataForge-Linter-GUI
+          --collect-data kdataforge_linter
+          --copy-metadata kdataforge-linter
+          src/kdataforge_linter/gui.py
+      - name: Smoke test CLI
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            ./dist/kdataforge-linter.exe --version
+            ./dist/kdataforge-linter.exe schemas check
+          else
+            ./dist/kdataforge-linter --version
+            ./dist/kdataforge-linter schemas check
+          fi
+      - name: Package Windows release
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item LICENSE,README.md -Destination dist
+          Compress-Archive -Path dist/* -DestinationPath "${{ matrix.artifact }}.zip"
+      - name: Package Linux release
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cp LICENSE README.md dist/
+          tar -C dist -czf "${{ matrix.artifact }}.tar.gz" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.*
+          if-no-files-found: error
+
+  publish:
+    needs: [prepare, build]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Package schemas and checksums
+        shell: bash
+        run: |
+          cd src/kdataforge_linter
+          zip -r "$GITHUB_WORKSPACE/release/KDataForge-Linter-Schemas.zip" schemas
+          cd "$GITHUB_WORKSPACE/release"
+          sha256sum * > checksums-sha256.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: KDataForge Linter ${{ needs.prepare.outputs.version }}
+          generate_release_notes: true
+          files: release/*
+          fail_on_unmatched_files: true
