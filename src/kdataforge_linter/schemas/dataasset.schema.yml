@@ -22,5 +22,12 @@ allOf:
               $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
             properties:
               $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/properties
+            unlocks:
+              type: array
+              items:
+                $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/instancedObject
+            dependencies:
+              type: array
+              items:
+                $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/instancedObject
 unevaluatedProperties: false
-

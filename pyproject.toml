@@ -38,6 +38,7 @@ packages = ["src/kdataforge_linter"]
 include = [
   "src/kdataforge_linter/**/*.py",
   "src/kdataforge_linter/schemas/*.yml",
+  "src/kdataforge_linter/catalogs/*.json",
   "src/kdataforge_linter/resources/*.png",
 ]
 

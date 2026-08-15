@@ -24,6 +24,14 @@ allOf:
             register: { type: boolean }
             properties:
               $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/properties
+            unlockDependencies:
+              type: array
+              items:
+                $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/instancedObject
+            visibilityDependencies:
+              type: array
+              items:
+                $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/instancedObject
             autoPath: { type: boolean, default: false }
             addNodes:
               type: array
@@ -53,4 +61,3 @@ allOf:
             - required: [class]
               not: { required: [id] }
 unevaluatedProperties: false
-

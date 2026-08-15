@@ -34,6 +34,20 @@ Exit codes:
 Start `KDataForge-Linter-GUI`, select or drop a `DataForge` directory, then choose **Validate**.
 Diagnostics include file, document, YAML path, line, column, rule code, and schema.
 
+## Unlock and dependency class checks
+
+Bundled catalog covers native and Blueprint descendants of `FGUnlock` and
+`FGAvailabilityDependency`, including loaded KMods classes. Linter checks instanced class references
+in schematic, research-tree, and delivery-task/data-asset lists. Native paths with known Blueprint
+implementations, abstract classes without Blueprint variants, wrong-family references, and unknown
+paths produce warnings only; they never make an otherwise valid pack fail.
+
+Regenerate catalog from Unreal project root:
+
+```text
+UnrealEditor-Cmd.exe FactoryGame.uproject -ExecutePythonScript=Mods/GameFeatures/KDataForge/Tools/scan_instanced_class_catalog.py -unattended -nop4
+```
+
 ## Development
 
 ```text

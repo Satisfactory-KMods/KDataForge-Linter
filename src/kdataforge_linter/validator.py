@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 
 from kdataforge_linter import legacy
+from kdataforge_linter.class_catalog import ClassCatalog, ClassFamily
 from kdataforge_linter.models import Diagnostic, LintResult
 from kdataforge_linter.schema_registry import SchemaRegistry
 
@@ -88,6 +89,7 @@ def lint_path(
 ) -> LintResult:
     root = root.resolve()
     registry = SchemaRegistry(schema_directories, allow_schema_override)
+    class_catalog = ClassCatalog()
     result = LintResult()
     if not root.is_dir():
         result.diagnostics.append(Diagnostic("error", "root.missing", "DataForge root does not exist", root))
@@ -111,7 +113,13 @@ def lint_path(
     for path in sorted(root.rglob("*.yml")) + sorted(root.rglob("*.yaml")):
         if path.name == "pack.yml":
             continue
-        _validate_file_documents(path, registry, result, allow_unknown_types=allow_unknown_types)
+        _validate_file_documents(
+            path,
+            registry,
+            result,
+            class_catalog=class_catalog,
+            allow_unknown_types=allow_unknown_types,
+        )
 
     result.diagnostics.sort(
         key=lambda item: (
@@ -131,6 +139,7 @@ def _validate_file_documents(
     registry: SchemaRegistry,
     result: LintResult,
     forced_kind: str | None = None,
+    class_catalog: ClassCatalog | None = None,
     allow_unknown_types: bool = False,
 ) -> None:
     try:
@@ -176,3 +185,117 @@ def _validate_file_documents(
                     loaded.path.name,
                 )
             )
+        if class_catalog is not None:
+            _validate_instanced_class_references(document, kind, path, index, node, class_catalog, result)
+
+
+def _validate_instanced_class_references(
+    document: dict[str, Any],
+    kind: str,
+    path: Path,
+    document_index: int,
+    node: yaml.Node | None,
+    catalog: ClassCatalog,
+    result: LintResult,
+) -> None:
+    def warn(family: ClassFamily, class_path: object, parts: list[object]) -> None:
+        if not isinstance(class_path, str) or not class_path.strip():
+            return
+        value = class_path.strip()
+        if value.startswith("/KDataForge/Gen/") or ("/" not in value and "." not in value):
+            return
+        entry = catalog.lookup(value)
+        code: str | None = None
+        message: str | None = None
+        if entry is None:
+            code = "class.unknown"
+            message = f"{family} class {value!r} is not in the bundled Unreal class catalog; runtime will verify it"
+        elif entry.family != family:
+            code = "class.wrong-family"
+            message = f"{value!r} is a {entry.family} class, not a {family} class"
+        elif entry.path.startswith("/Script/") and entry.blueprint:
+            code = "class.native-remapped"
+            message = f"native class {value!r} is remapped at runtime to concrete Blueprint {entry.blueprint!r}"
+        elif entry.abstract:
+            code = "class.abstract-no-blueprint"
+            message = f"abstract {family} class {value!r} has no known concrete Blueprint variant"
+        if code is None or message is None:
+            return
+        source_node = _node_at_path(node, parts)
+        result.diagnostics.append(
+            Diagnostic(
+                "warning",
+                code,
+                message,
+                path,
+                document_index,
+                _yaml_path(parts),
+                source_node.start_mark.line + 1 if source_node else None,
+                source_node.start_mark.column + 1 if source_node else None,
+            )
+        )
+
+    def validate_list(value: object, family: ClassFamily, parts: list[object]) -> None:
+        if not isinstance(value, list):
+            return
+        for index, entry in enumerate(value):
+            if isinstance(entry, dict):
+                warn(family, entry.get("class"), [*parts, index, "class"])
+
+    if kind == "unlock":
+        for index, entry in enumerate(document.get("unlocks", [])):
+            if isinstance(entry, dict):
+                warn("unlock", entry.get("parent"), ["unlocks", index, "parent"])
+    elif kind == "schematic":
+        for index, entry in enumerate(document.get("schematics", [])):
+            if not isinstance(entry, dict):
+                continue
+            validate_list(entry.get("unlocks"), "unlock", ["schematics", index, "unlocks"])
+            validate_list(entry.get("dependencies"), "dependency", ["schematics", index, "dependencies"])
+    elif kind == "research":
+        for index, entry in enumerate(document.get("research", [])):
+            if not isinstance(entry, dict):
+                continue
+            validate_list(
+                entry.get("unlockDependencies"),
+                "dependency",
+                ["research", index, "unlockDependencies"],
+            )
+            validate_list(
+                entry.get("visibilityDependencies"),
+                "dependency",
+                ["research", index, "visibilityDependencies"],
+            )
+    elif kind == "dataasset":
+        for index, entry in enumerate(document.get("assets", [])):
+            if not isinstance(entry, dict):
+                continue
+            validate_list(entry.get("unlocks"), "unlock", ["assets", index, "unlocks"])
+            validate_list(entry.get("dependencies"), "dependency", ["assets", index, "dependencies"])
+
+    property_families: dict[str, ClassFamily] = {
+        "mUnlocks": "unlock",
+        "mSchematicDependencies": "dependency",
+        "mUnlockDependencies": "dependency",
+        "mVisibilityDependencies": "dependency",
+        "mTaskDependencies": "dependency",
+    }
+
+    def scan_properties(value: object, parts: list[object]) -> None:
+        if isinstance(value, list):
+            for index, child in enumerate(value):
+                scan_properties(child, [*parts, index])
+            return
+        if not isinstance(value, dict):
+            return
+        property_path = value.get("path")
+        if isinstance(property_path, str):
+            field = property_path.rsplit(".", 1)[-1]
+            family = property_families.get(field)
+            if family is not None:
+                raw = value.get("value")
+                validate_list(raw if isinstance(raw, list) else [raw], family, [*parts, "value"])
+        for key, child in value.items():
+            scan_properties(child, [*parts, key])
+
+    scan_properties(document, [])
