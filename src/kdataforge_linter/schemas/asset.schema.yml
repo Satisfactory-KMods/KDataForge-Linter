@@ -21,8 +21,7 @@ allOf:
             file:
               type: string
               minLength: 1
-              pattern: '(?i)\.(png|jpe?g|tga|bmp)$'
+              pattern: '\.(?:[Pp][Nn][Gg]|[Jj][Pp][Ee]?[Gg]|[Tt][Gg][Aa]|[Bb][Mm][Pp])$'
             properties:
               $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/properties
 unevaluatedProperties: false
-

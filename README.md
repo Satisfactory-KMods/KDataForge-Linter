@@ -59,3 +59,18 @@ uv run kdataforge-linter lint ../KPatchwork/DataForge
 
 Schemas live in `src/kdataforge_linter/schemas`. Schema-only changes alter validation without
 changing Python code.
+
+## Editor schema hints
+
+KDataForge documents and `pack.yml` accept an optional root `$schema` key for YAML editor
+completion and diagnostics. Point it at the schema matching the document type:
+
+```yaml
+$schema: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/cdo.schema.yml
+type: cdo
+patches:
+  # ...
+```
+
+`$schema` is editor metadata. Linter and KDataForge runtime still determine document type from
+`type` or a recognized `<name>.<type>.yml` filename.

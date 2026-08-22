@@ -6,6 +6,8 @@ type: object
 additionalProperties: false
 required: [ref, name, version, contributer]
 properties:
+  $schema:
+    $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/schemaReference
   ref:
     $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/token
   name:
@@ -30,6 +32,10 @@ properties:
   debug:
     type: boolean
     default: false
+  conditionBehaivor:
+    $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/conditionBehavior
+  conditionBehavior:
+    $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/conditionBehavior
   conditions:
     $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/conditions
   dependencies:
@@ -41,4 +47,3 @@ properties:
     type: object
     additionalProperties:
       $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/token
-

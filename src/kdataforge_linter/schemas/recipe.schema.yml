@@ -12,6 +12,5 @@ allOf:
         type: array
         minItems: 1
         items:
-          $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/generatedEntry
+          $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/registerableEntry
 unevaluatedProperties: false
-

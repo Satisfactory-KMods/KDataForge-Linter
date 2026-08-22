@@ -29,7 +29,6 @@ allOf:
             matchAssets: { type: boolean, default: true }
             applyToSubclasses: { type: boolean, default: false }
             applyToSpawnedActors: { type: boolean, default: false }
-            propagateToInstances: { type: boolean, default: true }
             deferOneGameTick: { type: boolean, default: false }
             properties:
               $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/properties
@@ -38,4 +37,3 @@ allOf:
             - required: [allAssetsOfClass]
             - required: [matchTag, ofClass]
 unevaluatedProperties: false
-

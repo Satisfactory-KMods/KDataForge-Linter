@@ -15,7 +15,12 @@ $defs:
         minItems: 1
         items:
           $ref: '#/$defs/nonEmptyString'
-  conditions:
+  schemaReference:
+    $ref: '#/$defs/nonEmptyString'
+  conditionBehavior:
+    type: string
+    pattern: '^(?:[Aa][Nn][Dd]|[Oo][Rr])$'
+  conditionObject:
     type: object
     additionalProperties: false
     properties:
@@ -30,13 +35,30 @@ $defs:
           $ref: '#/$defs/nonEmptyString'
       hasClass:
         $ref: '#/$defs/stringOrList'
+      ifNotMatch:
+        type: boolean
+        default: false
+  conditions:
+    if:
+      type: array
+    then:
+      items:
+        $ref: '#/$defs/conditionObject'
+    else:
+      $ref: '#/$defs/conditionObject'
   documentBase:
     type: object
     properties:
+      $schema:
+        $ref: '#/$defs/schemaReference'
       type:
         $ref: '#/$defs/nonEmptyString'
       debug:
         type: boolean
+      conditionBehaivor:
+        $ref: '#/$defs/conditionBehavior'
+      conditionBehavior:
+        $ref: '#/$defs/conditionBehavior'
       conditions:
         $ref: '#/$defs/conditions'
       include:
@@ -92,6 +114,19 @@ $defs:
     items:
       $ref: '#/$defs/operation'
   generatedEntry:
+    type: object
+    additionalProperties: false
+    required: [id]
+    properties:
+      id:
+        $ref: '#/$defs/token'
+      parent:
+        $ref: '#/$defs/nonEmptyString'
+      register:
+        type: boolean
+      properties:
+        $ref: '#/$defs/properties'
+  registerableEntry:
     type: object
     additionalProperties: false
     properties:
@@ -198,4 +233,3 @@ $defs:
           X: { type: number }
           Y: { type: number }
           Z: { type: number }
-

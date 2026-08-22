@@ -196,6 +196,9 @@ class Linter:
         for key in ("enabled", "debug"):
             if key in data and not isinstance(data[key], bool):
                 self.error(path, f"{key} must be boolean")
+        if "conditions" in data:
+            self.validate_conditions(data["conditions"], path)
+        self.validate_condition_behavior(data, path)
         if "dependencies" in data and not self.string_list(data["dependencies"], path, "dependencies"):
             pass
         if "redirects" in data:
@@ -289,27 +292,42 @@ class Linter:
         return None
 
     def validate_conditions(self, value: Any, path: Path) -> None:
-        if not isinstance(value, dict):
-            self.error(path, "conditions must be a mapping")
+        if isinstance(value, dict):
+            condition_objects = [value]
+        elif isinstance(value, list):
+            condition_objects = value
+        else:
+            self.error(path, "conditions must be a mapping or sequence of mappings")
             return
         allowed = {
             "gameVersion",
             "hasMod",
             "modVersion",
             "hasClass",
-            "matchTag",
-            "ofClass",
-            "matchAssets",
-            "tagProperty",
+            "ifNotMatch",
         }
-        for key in value:
-            if key not in allowed:
-                self.warning(path, f"unknown condition key {key!r}")
-        for key in ("hasMod", "hasClass", "matchTag"):
-            if key in value and not isinstance(value[key], (str, list)):
-                self.error(path, f"condition {key} must be string or sequence")
-        if "modVersion" in value and not isinstance(value["modVersion"], dict):
-            self.error(path, "condition modVersion must be a mapping")
+        for index, condition in enumerate(condition_objects):
+            context = "condition" if isinstance(value, dict) else f"conditions[{index}]"
+            if not isinstance(condition, dict):
+                self.error(path, f"{context} must be a mapping")
+                continue
+            for key in condition:
+                if key not in allowed:
+                    self.warning(path, f"unknown condition key {key!r}")
+            for key in ("hasMod", "hasClass"):
+                if key in condition and not isinstance(condition[key], (str, list)):
+                    self.error(path, f"{context}.{key} must be string or sequence")
+            if "modVersion" in condition and not isinstance(condition["modVersion"], dict):
+                self.error(path, f"{context}.modVersion must be a mapping")
+            if "ifNotMatch" in condition and not isinstance(condition["ifNotMatch"], bool):
+                self.error(path, f"{context}.ifNotMatch must be boolean")
+
+    def validate_condition_behavior(self, mapping: dict[str, Any], path: Path) -> None:
+        for key in ("conditionBehaivor", "conditionBehavior"):
+            if key in mapping and (
+                not isinstance(mapping[key], str) or mapping[key].casefold() not in {"and", "or"}
+            ):
+                self.error(path, f"{key} must be AND or OR")
 
     def validate_property_ops(self, value: Any, path: Path, context: str) -> None:
         if not isinstance(value, list) or not value:
@@ -382,7 +400,7 @@ class Linter:
                 self.error(path, f"{context}.{key} must be a string")
         if "matchTag" in patch and "ofClass" not in patch:
             self.error(path, f"{context}.matchTag requires ofClass")
-        for key in ("applyToSubclasses", "applyToSpawnedActors", "propagateToInstances", "deferOneGameTick"):
+        for key in ("applyToSubclasses", "applyToSpawnedActors", "deferOneGameTick"):
             if key in patch and not isinstance(patch[key], bool):
                 self.error(path, f"{context}.{key} must be a boolean")
         if "properties" not in patch:
@@ -502,6 +520,8 @@ class Linter:
             has_class = isinstance(entry.get("class"), str) and bool(entry["class"].strip())
             if has_id == has_class:
                 self.error(path, f"{context} requires exactly one non-empty id or class")
+            if has_class and root_type not in {"recipe", "schematic", "research"}:
+                self.error(path, f"{context} class (register-only) is only valid for recipe/schematic/research")
             if has_id:
                 identifier = entry["id"].strip()
                 if not TOKEN.fullmatch(identifier):
@@ -618,6 +638,7 @@ class Linter:
         self.document_count += 1
         if "conditions" in mapping:
             self.validate_conditions(mapping["conditions"], path)
+        self.validate_condition_behavior(mapping, path)
         if "debug" in mapping and not isinstance(mapping["debug"], bool):
             self.error(path, "debug must be boolean")
         if "include" in mapping:
