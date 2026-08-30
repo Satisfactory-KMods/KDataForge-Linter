@@ -32,8 +32,10 @@ allOf:
             deferOneGameTick: { type: boolean, default: false }
             properties:
               $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/properties
-          oneOf:
+          anyOf:
             - required: [target]
             - required: [allAssetsOfClass]
             - required: [matchTag, ofClass]
+          dependentRequired:
+            matchTag: [ofClass]
 unevaluatedProperties: false

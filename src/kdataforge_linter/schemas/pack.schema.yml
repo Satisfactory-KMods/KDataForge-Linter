@@ -12,6 +12,8 @@ properties:
     $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/token
   name:
     $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
+  description:
+    type: string
   version:
     type: string
     pattern: '^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$'

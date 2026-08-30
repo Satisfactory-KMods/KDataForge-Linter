@@ -15,6 +15,11 @@ $defs:
         minItems: 1
         items:
           $ref: '#/$defs/nonEmptyString'
+  contentRemoval:
+    type: array
+    minItems: 1
+    items:
+      $ref: '#/$defs/nonEmptyString'
   schemaReference:
     $ref: '#/$defs/nonEmptyString'
   conditionBehavior:
@@ -233,3 +238,38 @@ $defs:
           X: { type: number }
           Y: { type: number }
           Z: { type: number }
+  sublevelBlockEntry:
+    oneOf:
+      - $ref: '#/$defs/nonEmptyString'
+      - type: object
+        additionalProperties: false
+        properties:
+          target:
+            $ref: '#/$defs/stringOrList'
+          allAssetsOfClass:
+            $ref: '#/$defs/nonEmptyString'
+        anyOf:
+          - required: [target]
+          - required: [allAssetsOfClass]
+  resourceNodeType:
+    type: string
+    pattern: '^(?:EResourceNodeType::)?(?:Node|FrackingSatellite|FrackingCore|Geyser|Deposit)$'
+  resourceNodeRemoval:
+    oneOf:
+      - $ref: '#/$defs/nonEmptyString'
+      - type: object
+        additionalProperties: false
+        required: [resource]
+        properties:
+          resource:
+            $ref: '#/$defs/nonEmptyString'
+          nodeTypes:
+            type: array
+            items:
+              $ref: '#/$defs/resourceNodeType'
+          allowOccupied:
+            type: boolean
+            default: false
+          removeFromScanner:
+            type: boolean
+            default: true

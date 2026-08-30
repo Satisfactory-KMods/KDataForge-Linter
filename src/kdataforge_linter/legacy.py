@@ -26,8 +26,10 @@ KNOWN_TYPES = {
     "recipe",
     "research",
     "resource",
+    "resourcenode",
     "schematic",
     "sinkpoints",
+    "sublevel",
     "unlock",
 }
 CONTENT_KEYS = {
@@ -41,6 +43,8 @@ CONTENT_KEYS = {
     "unlock": "unlocks",
 }
 REGISTER_AS = {"recipe", "schematic", "research"}
+REMOVABLE_CONTENT_TYPES = {"recipe", "schematic", "research"}
+RESOURCE_NODE_TYPES = {"node", "frackingsatellite", "frackingcore", "geyser", "deposit"}
 CURVE_INTERP_MODES = {"constant", "linear", "cubic"}
 CURVE_TANGENT_MODES = {"auto", "smartauto", "user", "break"}
 CURVE_TANGENT_WEIGHT_MODES = {"none", "arrive", "leave", "both"}
@@ -388,8 +392,6 @@ class Linter:
         selectors = [key for key in ("target", "allAssetsOfClass", "matchTag") if key in patch]
         if not selectors:
             self.error(path, f"{context} needs target, allAssetsOfClass, or matchTag")
-        if len(selectors) > 1:
-            self.error(path, f"{context} selectors are mutually exclusive: {selectors}")
         if "target" in patch:
             target = patch["target"]
             values = target if isinstance(target, list) else [target]
@@ -508,8 +510,18 @@ class Linter:
 
     def validate_content_entries(self, root_type: str, document: dict[str, Any], path: Path, pack_ref: str) -> None:
         key = CONTENT_KEYS[root_type]
-        entries = self.require_sequence(document, key, path, root_type)
-        if entries is None:
+        has_removals = self.validate_content_removals(root_type, document, path)
+        entries_value = document.get(key)
+        if entries_value is None:
+            if has_removals:
+                return
+            self.error(path, f"{root_type} requires a non-empty '{key}' sequence or a 'remove' sequence")
+            return
+        entries = entries_value
+        if not isinstance(entries, list) or not entries:
+            if has_removals:
+                return
+            self.error(path, f"{root_type} requires a non-empty '{key}' sequence or a 'remove' sequence")
             return
         for index, entry in enumerate(entries):
             context = f"{root_type}.{key}[{index}]"
@@ -544,6 +556,74 @@ class Linter:
                         self.validate_instanced_list(entry[key_name], path, f"{context}.{key_name}")
             if root_type == "research":
                 self.validate_research_mutations(entry, path, context)
+
+    def validate_content_removals(self, root_type: str, document: dict[str, Any], path: Path) -> bool:
+        if root_type not in REMOVABLE_CONTENT_TYPES or "remove" not in document:
+            return False
+        removals = document["remove"]
+        if not isinstance(removals, list) or not removals:
+            self.error(path, "'remove' must be a non-empty sequence of class references")
+            return False
+        valid = True
+        for index, removal in enumerate(removals):
+            if not isinstance(removal, str) or not removal.strip():
+                self.error(path, f"{root_type}.remove[{index}] must be a bare non-empty class reference")
+                valid = False
+        return valid
+
+    def validate_sublevel_document(self, document: dict[str, Any], path: Path) -> None:
+        blocks = self.require_sequence(document, "block", path, "sublevel")
+        if blocks is None:
+            return
+        for index, entry in enumerate(blocks):
+            context = f"sublevel.block[{index}]"
+            if isinstance(entry, str) and entry.strip():
+                continue
+            if not isinstance(entry, dict):
+                self.error(path, f"{context} must be an asset path or selector mapping")
+                continue
+            has_path = False
+            if "target" in entry:
+                target = entry["target"]
+                values = target if isinstance(target, list) else [target]
+                if values and all(isinstance(item, str) and item.strip() for item in values):
+                    has_path = True
+                else:
+                    self.error(path, f"{context}.target must be a path string or sequence of path strings")
+            if "allAssetsOfClass" in entry:
+                if isinstance(entry["allAssetsOfClass"], str) and entry["allAssetsOfClass"].strip():
+                    has_path = True
+                else:
+                    self.error(path, f"{context}.allAssetsOfClass must be a non-empty string")
+            if not has_path:
+                self.error(path, f"{context} needs target or allAssetsOfClass")
+
+    def validate_resourcenode_document(self, document: dict[str, Any], path: Path) -> None:
+        removals = self.require_sequence(document, "remove", path, "resourcenode")
+        if removals is None:
+            return
+        for index, entry in enumerate(removals):
+            context = f"resourcenode.remove[{index}]"
+            if isinstance(entry, str) and entry.strip():
+                continue
+            if not isinstance(entry, dict):
+                self.error(path, f"{context} must be a resource class reference or mapping")
+                continue
+            resource = entry.get("resource")
+            if not isinstance(resource, str) or not resource.strip():
+                self.error(path, f"{context}.resource must be a non-empty resource descriptor class reference")
+            if "nodeTypes" in entry:
+                node_types = entry["nodeTypes"]
+                if not isinstance(node_types, list):
+                    self.error(path, f"{context}.nodeTypes must be a sequence")
+                else:
+                    for node_index, node_type in enumerate(node_types):
+                        normalized = str(node_type).removeprefix("EResourceNodeType::").casefold()
+                        if normalized not in RESOURCE_NODE_TYPES:
+                            self.error(path, f"{context}.nodeTypes[{node_index}] must be a valid EResourceNodeType")
+            for key in ("allowOccupied", "removeFromScanner"):
+                if key in entry and not isinstance(entry[key], bool):
+                    self.error(path, f"{context}.{key} must be boolean")
 
     def validate_instanced_list(self, value: Any, path: Path, context: str) -> None:
         if not isinstance(value, list):
@@ -672,6 +752,10 @@ class Linter:
                         self.error(path, f"gametag.tags[{i}] must be tag string or mapping with tag")
         elif root_type in CONTENT_KEYS:
             self.validate_content_entries(root_type, mapping, path, pack_ref)
+        elif root_type == "sublevel":
+            self.validate_sublevel_document(mapping, path)
+        elif root_type == "resourcenode":
+            self.validate_resourcenode_document(mapping, path)
         elif root_type == "curve":
             self.validate_curve_document(mapping, path, pack_ref)
         elif root_type in {"asset", "dataasset"}:

@@ -30,8 +30,10 @@ def test_all_builtin_schemas_load() -> None:
         "recipe",
         "research",
         "resource",
+        "resourcenode",
         "schematic",
         "sinkpoints",
+        "sublevel",
         "unlock",
     ]
 
@@ -170,6 +172,17 @@ def test_pack_allows_schema_metadata_and_current_condition_grammar(valid_datafor
     assert result.ok, [item.to_dict() for item in result.diagnostics]
 
 
+def test_pack_allows_description_metadata(valid_dataforge: Path) -> None:
+    manifest = next(valid_dataforge.rglob("pack.yml"))
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8") + "\ndescription: Human-readable pack summary.\n",
+        encoding="utf-8",
+    )
+
+    result = lint_path(valid_dataforge)
+    assert result.ok, [item.to_dict() for item in result.diagnostics]
+
+
 def test_if_not_match_requires_boolean(valid_dataforge: Path) -> None:
     document = next(valid_dataforge.rglob("*.cdo.yml"))
     document.write_text(
@@ -249,6 +262,117 @@ def test_register_only_class_remains_valid_for_recipe(valid_dataforge: Path) -> 
                 "type: recipe",
                 "recipes:",
                 "  - class: /Game/Example.Recipe_Example_C",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = lint_path(valid_dataforge)
+    assert result.ok, [item.to_dict() for item in result.diagnostics]
+
+
+@pytest.mark.parametrize(
+    ("root_type", "entries_key", "removed_class"),
+    [
+        ("recipe", "recipes", "/Game/FactoryGame/Recipes/Constructor/Recipe_IronPlate.Recipe_IronPlate_C"),
+        ("schematic", "schematics", "/Game/FactoryGame/Schematics/Progression/Schematic_1-1.Schematic_1-1_C"),
+        ("research", "research", "/Game/FactoryGame/Schematics/MAM/Trees/Quartz/Research_Quartz.Research_Quartz_C"),
+    ],
+)
+def test_content_roots_allow_remove_only_documents(
+    valid_dataforge: Path, root_type: str, entries_key: str, removed_class: str
+) -> None:
+    pack = next(valid_dataforge.rglob("pack.yml")).parent
+    (pack / f"remove-only.{root_type}.yml").write_text(
+        "\n".join(
+            [
+                f"type: {root_type}",
+                "remove:",
+                f"  - {removed_class}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = lint_path(valid_dataforge)
+    assert result.ok, [item.to_dict() for item in result.diagnostics]
+
+
+def test_schematic_allows_entries_and_document_remove_together(valid_dataforge: Path) -> None:
+    pack = next(valid_dataforge.rglob("pack.yml")).parent
+    (pack / "replace.schematic.yml").write_text(
+        "\n".join(
+            [
+                "type: schematic",
+                "remove:",
+                "  - /Game/FactoryGame/Schematics/Progression/Schematic_1-1.Schematic_1-1_C",
+                "schematics:",
+                "  - id: ReplacementSchematic",
+                "    parent: /Script/FactoryGame.FGSchematic",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = lint_path(valid_dataforge)
+    assert result.ok, [item.to_dict() for item in result.diagnostics]
+
+
+def test_sublevel_documents_accept_scalar_and_selector_blocks(valid_dataforge: Path) -> None:
+    pack = next(valid_dataforge.rglob("pack.yml")).parent
+    (pack / "world.sublevel.yml").write_text(
+        "\n".join(
+            [
+                "type: sublevel",
+                "block:",
+                "  - /RefinedPower/World/Sublevels/Example.Example",
+                "  - target:",
+                "      - /KBFL/World/Sublevels/Example.Example",
+                "    allAssetsOfClass: /Script/KBFL.KBFLSubLevelSpawning",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = lint_path(valid_dataforge)
+    assert result.ok, [item.to_dict() for item in result.diagnostics]
+
+
+def test_resourcenode_documents_accept_scalar_and_option_maps(valid_dataforge: Path) -> None:
+    pack = next(valid_dataforge.rglob("pack.yml")).parent
+    (pack / "nodes.resourcenode.yml").write_text(
+        "\n".join(
+            [
+                "type: resourcenode",
+                "remove:",
+                "  - /Game/FactoryGame/Resource/RawResources/Iron/Desc_Iron.Desc_Iron_C",
+                "  - resource: /Game/FactoryGame/Resource/RawResources/Coal/Desc_Coal.Desc_Coal_C",
+                "    nodeTypes:",
+                "      - Node",
+                "      - EResourceNodeType::Geyser",
+                "    allowOccupied: false",
+                "    removeFromScanner: true",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = lint_path(valid_dataforge)
+    assert result.ok, [item.to_dict() for item in result.diagnostics]
+
+
+def test_cdo_patch_allows_combined_runtime_selectors(valid_dataforge: Path) -> None:
+    document = next(valid_dataforge.rglob("*.cdo.yml"))
+    document.write_text(
+        "\n".join(
+            [
+                "type: cdo",
+                "patches:",
+                "  - target: /Game/Example.Example_C",
+                "    allAssetsOfClass: /Script/FactoryGame.FGItemDescriptor",
+                "    properties:",
+                "      - path: mValue",
+                "        value: 2",
             ]
         ),
         encoding="utf-8",

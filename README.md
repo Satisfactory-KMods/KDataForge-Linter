@@ -20,6 +20,12 @@ Add schemas for third-party KDataForge handlers with `--schema-dir PATH`. Extern
 JSON Schema Draft 2020-12 written as YAML and declare their root type through `x-kdf-type`.
 Built-in types cannot be replaced unless `--allow-schema-override` is passed explicitly.
 
+Bundled coverage includes every current KDataForge runtime root, including `sublevel` and
+`resourcenode`. Recipe, schematic, and research documents accept top-level `remove:` in mixed or
+remove-only form; `mam` uses the research schema. CDO selector matches accumulate, so `target`,
+`allAssetsOfClass`, and `matchTag` may coexist when `matchTag` also supplies `ofClass`. Pack
+manifests may carry an optional string `description` for repository/display metadata.
+
 Exit codes:
 
 | Code | Meaning |
@@ -57,8 +63,9 @@ uv run ruff check .
 uv run kdataforge-linter lint ../KPatchwork/DataForge
 ```
 
-Schemas live in `src/kdataforge_linter/schemas`. Schema-only changes alter validation without
-changing Python code.
+Schemas live in `src/kdataforge_linter/schemas`. New built-in roots must also be added to the
+filename inference sets in `validator.py` and `legacy.py`; existing-root grammar changes normally
+stay schema-only unless the legacy semantic pass duplicates that rule.
 
 ## Editor schema hints
 

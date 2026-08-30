@@ -27,8 +27,10 @@ BUILTIN_TYPES = {
     "recipe",
     "research",
     "resource",
+    "resourcenode",
     "schematic",
     "sinkpoints",
+    "sublevel",
     "unlock",
 }
 
