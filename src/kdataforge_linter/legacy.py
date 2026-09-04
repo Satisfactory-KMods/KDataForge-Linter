@@ -26,8 +26,10 @@ KNOWN_TYPES = {
     "recipe",
     "research",
     "resource",
+    "resourcenode",
     "schematic",
     "sinkpoints",
+    "sublevel",
     "unlock",
 }
 CONTENT_KEYS = {
@@ -385,11 +387,13 @@ class Linter:
             self.validate_inline_instances(child, path, f"{context}.{key}")
 
     def validate_target(self, patch: dict[str, Any], path: Path, context: str) -> None:
+        # At least one selector, but they are NOT mutually exclusive: GatherTargets resolves the
+        # `target:` paths, then appends the allAssetsOfClass matches, then the matchTag matches, all
+        # into the same target list (KDFCdoHandler.cpp:137-192, :228-290). The handler errors only
+        # when all three are absent (:85-87), so a combined entry patches the union.
         selectors = [key for key in ("target", "allAssetsOfClass", "matchTag") if key in patch]
         if not selectors:
             self.error(path, f"{context} needs target, allAssetsOfClass, or matchTag")
-        if len(selectors) > 1:
-            self.error(path, f"{context} selectors are mutually exclusive: {selectors}")
         if "target" in patch:
             target = patch["target"]
             values = target if isinstance(target, list) else [target]
@@ -506,8 +510,25 @@ class Linter:
                 elif not isinstance(curve["isEventCurve"], bool):
                     self.error(path, f"{context}.isEventCurve must be boolean")
 
+    def validate_content_removals(self, root_type: str, document: dict[str, Any], path: Path) -> bool:
+        """Document-level `remove:`. Only the registration-capable kinds read it, and entries are
+        bare class references — UKDFContentClassHandler::CollectRemovals rejects a mapping."""
+        if "remove" not in document or root_type not in REGISTER_AS:
+            return False
+        removals = self.require_sequence(document, "remove", path, root_type)
+        if removals is None:
+            return False
+        for index, entry in enumerate(removals):
+            if not isinstance(entry, str) or not entry.strip():
+                self.error(path, f"{root_type}.remove[{index}] must be a bare class reference, not a mapping")
+        return True
+
     def validate_content_entries(self, root_type: str, document: dict[str, Any], path: Path, pack_ref: str) -> None:
         key = CONTENT_KEYS[root_type]
+        has_removals = self.validate_content_removals(root_type, document, path)
+        # A removal-only document is legal and carries no entries sequence at all.
+        if has_removals and key not in document:
+            return
         entries = self.require_sequence(document, key, path, root_type)
         if entries is None:
             return

@@ -5,9 +5,14 @@ title: KDataForge recipes
 allOf:
   - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/documentBase
   - type: object
-    required: [recipes]
+    # A `remove:`-only document carries no entries sequence at all.
+    anyOf:
+      - required: [recipes]
+      - required: [remove]
     properties:
       type: { const: recipe }
+      remove:
+        $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/contentRemovals
       recipes:
         type: array
         minItems: 1

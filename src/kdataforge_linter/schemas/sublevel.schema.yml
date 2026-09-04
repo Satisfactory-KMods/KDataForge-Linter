@@ -1,0 +1,30 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/sublevel.schema.yml
+x-kdf-type: sublevel
+title: KDataForge sublevel blocks
+allOf:
+  - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/documentBase
+  - type: object
+    required: [block]
+    properties:
+      type: { const: sublevel }
+      block:
+        type: array
+        minItems: 1
+        items:
+          oneOf:
+            # A bare path is the same thing as a one-entry `target:`.
+            - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
+            - type: object
+              additionalProperties: false
+              properties:
+                target:
+                  $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/stringOrList
+                allAssetsOfClass:
+                  $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
+              # anyOf, NOT cdo's oneOf: GatherTargets appends the allAssetsOfClass matches to the
+              # target paths of the SAME entry, so both keys together is legal and blocks both sets.
+              anyOf:
+                - required: [target]
+                - required: [allAssetsOfClass]
+unevaluatedProperties: false

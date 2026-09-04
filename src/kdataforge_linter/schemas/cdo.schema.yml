@@ -32,7 +32,11 @@ allOf:
             deferOneGameTick: { type: boolean, default: false }
             properties:
               $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/properties
-          oneOf:
+          # anyOf, not oneOf: GatherTargets resolves `target:` paths, then appends the
+          # allAssetsOfClass matches, then appends the matchTag matches — all three to the SAME
+          # OutTargets (KDFCdoHandler.cpp:137-192, :228-290). The handler errors only when ALL
+          # THREE are absent (:85-87), so combining them is legal and patches the union.
+          anyOf:
             - required: [target]
             - required: [allAssetsOfClass]
             - required: [matchTag, ofClass]

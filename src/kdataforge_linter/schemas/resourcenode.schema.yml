@@ -1,0 +1,42 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/resourcenode.schema.yml
+x-kdf-type: resourcenode
+title: KDataForge resource node purges
+allOf:
+  - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/documentBase
+  - type: object
+    required: [remove]
+    properties:
+      type: { const: resourcenode }
+      remove:
+        type: array
+        minItems: 1
+        items:
+          oneOf:
+            # A bare scalar is the shorthand for `- resource: <path>` with every option defaulted.
+            - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
+            - type: object
+              additionalProperties: false
+              required: [resource]
+              properties:
+                resource:
+                  $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
+                # EResourceNodeType names, bare or `EResourceNodeType::`-prefixed. `Invalid` is a real
+                # enumerator but the handler rejects it — it matches nothing.
+                nodeTypes:
+                  type: array
+                  items:
+                    enum:
+                      - Node
+                      - FrackingSatellite
+                      - FrackingCore
+                      - Geyser
+                      - Deposit
+                      - EResourceNodeType::Node
+                      - EResourceNodeType::FrackingSatellite
+                      - EResourceNodeType::FrackingCore
+                      - EResourceNodeType::Geyser
+                      - EResourceNodeType::Deposit
+                allowOccupied: { type: boolean, default: false }
+                removeFromScanner: { type: boolean, default: true }
+unevaluatedProperties: false

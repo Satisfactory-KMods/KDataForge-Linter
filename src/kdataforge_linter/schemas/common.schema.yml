@@ -63,6 +63,13 @@ $defs:
         $ref: '#/$defs/conditions'
       include:
         $ref: '#/$defs/stringOrList'
+  # Document-level `remove:` for the registration-capable content kinds (recipe/schematic/research).
+  # Entries are bare class references — a map is an error in UKDFContentClassHandler::CollectRemovals.
+  contentRemovals:
+    type: array
+    minItems: 1
+    items:
+      $ref: '#/$defs/nonEmptyString'
   propertyPath:
     type: string
     pattern: '^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*|\[(?:\d+|[A-Za-z0-9_ -]+|"[^"]+")\])*$'
