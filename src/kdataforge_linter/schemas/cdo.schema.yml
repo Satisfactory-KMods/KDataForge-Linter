@@ -13,20 +13,15 @@ allOf:
         minItems: 1
         items:
           type: object
-          additionalProperties: false
           required: [properties]
+          allOf:
+            - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/scopeFilters
+            - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/scopeNeedsOfClass
           properties:
             target:
               $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/stringOrList
             allAssetsOfClass:
               $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
-            matchTag:
-              $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/stringOrList
-            ofClass:
-              $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
-            tagProperty:
-              $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
-            matchAssets: { type: boolean, default: true }
             applyToSubclasses: { type: boolean, default: false }
             applyToSpawnedActors: { type: boolean, default: false }
             deferOneGameTick: { type: boolean, default: false }
@@ -35,7 +30,6 @@ allOf:
           anyOf:
             - required: [target]
             - required: [allAssetsOfClass]
-            - required: [matchTag, ofClass]
-          dependentRequired:
-            matchTag: [ofClass]
+            - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/hasScopeFilter
+          unevaluatedProperties: false
 unevaluatedProperties: false

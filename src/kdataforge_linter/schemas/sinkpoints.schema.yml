@@ -14,12 +14,17 @@ allOf:
         minItems: 1
         items:
           type: object
-          additionalProperties: false
-          required: [item, points]
+          required: [points]
+          allOf:
+            - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/scopeFilters
           properties:
             item:
               $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/nonEmptyString
             points: { type: integer }
             overridden: { type: integer }
+          anyOf:
+            - required: [item]
+            - $ref: https://raw.githubusercontent.com/Satisfactory-KMods/KDataForge-Linter/main/src/kdataforge_linter/schemas/common.schema.yml#/$defs/hasScopeFilter
+          unevaluatedProperties: false
 unevaluatedProperties: false
 

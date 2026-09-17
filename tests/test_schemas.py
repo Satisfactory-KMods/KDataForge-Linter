@@ -221,8 +221,10 @@ def test_removed_propagate_to_instances_is_rejected(valid_dataforge: Path) -> No
     )
 
     result = lint_path(valid_dataforge)
+    # Patch entries compose the shared scope-filter keys via allOf/$ref, so unknown keys surface
+    # as unevaluatedProperties rather than additionalProperties.
     assert any(
-        item.code == "schema.additionalProperties" and item.yaml_path == "$.patches[0]" for item in result.errors
+        item.code == "schema.unevaluatedProperties" and item.yaml_path == "$.patches[0]" for item in result.errors
     )
 
 
@@ -380,6 +382,268 @@ def test_cdo_patch_allows_combined_runtime_selectors(valid_dataforge: Path) -> N
 
     result = lint_path(valid_dataforge)
     assert result.ok, [item.to_dict() for item in result.diagnostics]
+
+
+def test_cdo_patch_allows_scope_filters(valid_dataforge: Path) -> None:
+    document = next(valid_dataforge.rglob("*.cdo.yml"))
+    document.write_text(
+        "\n".join(
+
+            [
+                "type: cdo",
+                "patches:",
+                "  - producedIn: Build_ConstructorMk1_C",
+                "    properties:",
+                "      - path: mManufactoringDuration",
+                "        op: multiply",
+                "        value: 0.5",
+                "  - ingredient: [Desc_IronIngot_C, Desc_CopperIngot_C]",
+                "    product: Desc_IronPlate_C",
+                "    ofClass: /Script/FactoryGame.FGRecipe",
+                "    properties:",
+                "      - path: mManufactoringDuration",
+                "        value: 2",
+                "  - ofClass: /Script/FactoryGame.FGRecipe",
+                "    matchName: Recipe_Alternate_*",
+                "    where:",
+                "      - path: mManufactoringDuration",
+                "        greaterThan: 4",
+                "      - path: mIngredients[*].ItemClass",
+                "        equals: Desc_IronIngot_C",
+                "      - path: mProducedIn",
+                "        isEmpty: false",
+                "      - path: mDisplayName",
+                "        matches: '*Alternate*'",
+                "    properties:",
+                "      - path: mManufactoringDuration",
+                "        op: multiply",
+                "        value: 0.8",
+                "  - ofClass: /Script/FactoryGame.FGSchematic",
+                "    where:",
+                "      path: mTechTier",
+                "      lessOrEqual: 3",
+                "    properties:",
+                "      - path: mTimeToComplete",
+                "        value: 1",
+                "  - producedIn: /Script/FactoryGame.FGBuildGun",
+                "    where:",
+                "      path: mIngredients",
+                "      isEmpty: false",
+                "    properties:",
+                "      - path: mIngredients[0].Amount",
+                "        op: multiply",
+                "        value: 0.8",
+                "  - ofClass: /Script/FactoryGame.FGItemDescriptor",
+                "    where:",
+                "      - path: mForm",
+                "        in: [RF_LIQUID, RF_GAS]",
+                "      - path: mProducedIn",
+                "        notIn: [Build_ConstructorMk1_C]",
+                "    properties:",
+                "      - path: mResourceSinkPoints",
+                "        value: 0",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = lint_path(valid_dataforge)
+    assert result.ok, [item.to_dict() for item in result.diagnostics]
+
+
+@pytest.mark.parametrize(
+    ("patch_lines", "expected_message"),
+    [
+        # matchName / where need an explicit ofClass scope
+        (["  - matchName: Recipe_*"], "matchName requires ofClass"),
+        (
+            ["  - ofClass: /Script/FactoryGame.FGRecipe", "    where:", "      path: mTechTier"],
+            "needs exactly one operator",
+        ),
+        # exactly one operator per where clause
+        (
+            [
+                "  - ofClass: /Script/FactoryGame.FGRecipe",
+                "    where:",
+                "      path: mTechTier",
+                "      equals: 1",
+                "      lessThan: 3",
+            ],
+            "needs exactly one operator",
+        ),
+        # numeric operators take numbers
+        (
+            ["  - ofClass: /Script/FactoryGame.FGRecipe", "    where:", "      path: mTechTier", "      lessThan: abc"],
+            "lessThan must be a finite number",
+        ),
+        # unknown where key
+        (
+            ["  - ofClass: /Script/FactoryGame.FGRecipe", "    where:", "      path: mTechTier", "      like: abc"],
+            "like is not a where operator",
+        ),
+        # `[*]` is accepted, other junk in a path is not
+        (
+            [
+                "  - ofClass: /Script/FactoryGame.FGRecipe",
+                "    where:",
+                "      path: mIngredients[*]..ItemClass",
+                "      equals: Desc_IronIngot_C",
+            ],
+            "path is not a valid property path",
+        ),
+    ],
+)
+def test_cdo_scope_filters_reject_malformed_input(
+    valid_dataforge: Path, patch_lines: list[str], expected_message: str
+) -> None:
+    document = next(valid_dataforge.rglob("*.cdo.yml"))
+    document.write_text(
+        "\n".join(
+            [
+                "type: cdo",
+                "patches:",
+                *patch_lines,
+                "    properties:",
+                "      - path: mValue",
+                "        value: 2",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = lint_path(valid_dataforge)
+    assert not result.ok
+    # The semantic pass carries the precise, user-facing reason (the JSON schema's `oneOf`
+    # wrapper around `where` only reports "not valid under any of the given schemas").
+    assert any(expected_message in item.message for item in result.errors), [
+        item.to_dict() for item in result.diagnostics
+    ]
+
+
+@pytest.mark.parametrize(
+    ("filename", "body"),
+    [
+        (
+            "prune.recipe.yml",
+            "\n".join(
+                [
+                    "type: recipe",
+                    "remove:",
+                    "  - Recipe_IronPlateReinforced_C",
+                    "  - producedIn: Build_ConstructorMk1_C",
+                    "    ingredient: Desc_IronIngot_C",
+                    "  - ofClass: /Script/FactoryGame.FGRecipe",
+                    "    matchName: Recipe_Alternate_*",
+                    "    where:",
+                    "      path: mManufactoringDuration",
+                    "      greaterThan: 10",
+                ]
+            ),
+        ),
+        (
+            "prune.schematic.yml",
+            "\n".join(
+                [
+                    "type: schematic",
+                    "remove:",
+                    "  - where: # scope defaults to FGSchematic",
+                    "      path: mTechTier",
+                    "      greaterOrEqual: 8",
+                    "  - matchName: Schematic_Alternate_*",
+                ]
+            ),
+        ),
+        (
+            "prune.research.yml",
+            "\n".join(
+                [
+                    "type: research",
+                    "remove:",
+                    "  - ofClass: /Script/FactoryGame.FGResearchTree",
+                    "    matchName: /Game/SomeMod/*",
+                ]
+            ),
+        ),
+        (
+            "prune.resourcenode.yml",
+            "\n".join(
+                [
+                    "type: resourcenode",
+                    "remove:",
+                    "  - ofClass: /Script/FactoryGame.FGResourceDescriptor",
+                    "    matchName: Desc_OreUranium*",
+                    "    nodeTypes: [Node]",
+                    "    allowOccupied: true",
+                ]
+            ),
+        ),
+        (
+            "prune.sublevel.yml",
+            "\n".join(
+                [
+                    "type: sublevel",
+                    "block:",
+                    "  - ofClass: /Script/RefinedRDLib.RRDLSublevelAsset",
+                    "    matchName: DA_Optional_*",
+                ]
+            ),
+        ),
+        (
+            "points.sinkpoints.yml",
+            "\n".join(
+                [
+                    "type: sinkpoints",
+                    "entries:",
+                    "  - item: Desc_IronPlate_C",
+                    "    points: 6",
+                    "  - where: # scope defaults to FGItemDescriptor",
+                    "      path: mForm",
+                    "      in: [RF_LIQUID, RF_GAS]",
+                    "    points: 0",
+                ]
+            ),
+        ),
+    ],
+)
+def test_scope_filters_are_accepted_by_every_selecting_type(valid_dataforge: Path, filename: str, body: str) -> None:
+    pack = next(valid_dataforge.rglob("pack.yml")).parent
+    (pack / filename).write_text(body, encoding="utf-8")
+
+    result = lint_path(valid_dataforge)
+    assert result.ok, [item.to_dict() for item in result.diagnostics]
+
+
+@pytest.mark.parametrize(
+    ("filename", "body", "expected_message"),
+    [
+        (
+            "bad.recipe.yml",
+            "type: recipe\nremove:\n  - ofClass: /Script/FactoryGame.FGRecipe\n",
+            "map entries need a filter",
+        ),
+        (
+            "bad.sublevel.yml",
+            "type: sublevel\nblock:\n  - matchName: DA_*\n",
+            "filters require ofClass",
+        ),
+        (
+            "bad.sinkpoints.yml",
+            "type: sinkpoints\nentries:\n  - points: 3\n",
+            "requires item or a filter",
+        ),
+    ],
+)
+def test_scope_filter_forms_reject_missing_selectors(
+    valid_dataforge: Path, filename: str, body: str, expected_message: str
+) -> None:
+    pack = next(valid_dataforge.rglob("pack.yml")).parent
+    (pack / filename).write_text(body, encoding="utf-8")
+
+    result = lint_path(valid_dataforge)
+    assert not result.ok
+    assert any(expected_message in item.message for item in result.errors), [
+        item.to_dict() for item in result.diagnostics
+    ]
 
 
 def test_external_schema_adds_custom_type(valid_dataforge: Path, tmp_path: Path) -> None:

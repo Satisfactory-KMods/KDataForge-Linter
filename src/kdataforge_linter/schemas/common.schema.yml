@@ -15,11 +15,116 @@ $defs:
         minItems: 1
         items:
           $ref: '#/$defs/nonEmptyString'
+  # One `where:` filter clause: a property path (may contain `[*]`) plus exactly one operator.
+  whereClause:
+    type: object
+    additionalProperties: false
+    required: [path]
+    properties:
+      path:
+        $ref: '#/$defs/nonEmptyString'
+      equals: {}
+      notEquals: {}
+      lessThan: { type: number }
+      lessOrEqual: { type: number }
+      greaterThan: { type: number }
+      greaterOrEqual: { type: number }
+      contains: {}
+      notContains: {}
+      in:
+        oneOf:
+          - $ref: '#/$defs/nonEmptyString'
+          - type: number
+          - type: boolean
+          - type: array
+            minItems: 1
+      notIn:
+        oneOf:
+          - $ref: '#/$defs/nonEmptyString'
+          - type: number
+          - type: boolean
+          - type: array
+            minItems: 1
+      matches:
+        $ref: '#/$defs/nonEmptyString'
+      isEmpty: { type: boolean }
+    oneOf:
+      - required: [equals]
+      - required: [notEquals]
+      - required: [lessThan]
+      - required: [lessOrEqual]
+      - required: [greaterThan]
+      - required: [greaterOrEqual]
+      - required: [contains]
+      - required: [notContains]
+      - required: [in]
+      - required: [notIn]
+      - required: [matches]
+      - required: [isEmpty]
+  # The scope-filter keys every selecting document type shares (cdo patches, remove: entries,
+  # sublevel block: entries, sinkpoints entries). Whether ofClass is required depends on the
+  # document type — see scopeNeedsOfClass.
+  scopeFilters:
+    type: object
+    properties:
+      ofClass:
+        $ref: '#/$defs/nonEmptyString'
+      matchTag:
+        $ref: '#/$defs/stringOrList'
+      tagProperty:
+        $ref: '#/$defs/nonEmptyString'
+      matchAssets: { type: boolean, default: true }
+      matchName:
+        $ref: '#/$defs/stringOrList'
+      producedIn:
+        $ref: '#/$defs/stringOrList'
+      ingredient:
+        $ref: '#/$defs/stringOrList'
+      product:
+        $ref: '#/$defs/stringOrList'
+      where:
+        oneOf:
+          - $ref: '#/$defs/whereClause'
+          - type: array
+            minItems: 1
+            items:
+              $ref: '#/$defs/whereClause'
+  # For types WITHOUT a default scope (cdo patches, sublevel block entries): matchTag / matchName /
+  # where need an explicit ofClass, or a recipe shortcut (producedIn / ingredient / product →
+  # FGRecipe). remove: entries, resourcenode entries and sinkpoints entries default the scope to
+  # their own base class and do not reference this rule.
+  scopeNeedsOfClass:
+    if:
+      anyOf:
+        - required: [matchTag]
+        - required: [matchName]
+        - required: [where]
+    then:
+      anyOf:
+        - required: [ofClass]
+        - required: [producedIn]
+        - required: [ingredient]
+        - required: [product]
+  hasScopeFilter:
+    anyOf:
+      - required: [matchTag]
+      - required: [matchName]
+      - required: [where]
+      - required: [producedIn]
+      - required: [ingredient]
+      - required: [product]
+  # `remove:` entry of recipe / schematic / research documents: one class reference, or a filter
+  # map selecting every class of the type that passes.
   contentRemoval:
     type: array
     minItems: 1
     items:
-      $ref: '#/$defs/nonEmptyString'
+      oneOf:
+        - $ref: '#/$defs/nonEmptyString'
+        - allOf:
+            - $ref: '#/$defs/scopeFilters'
+            - $ref: '#/$defs/hasScopeFilter'
+          unevaluatedProperties: false
   schemaReference:
     $ref: '#/$defs/nonEmptyString'
   conditionBehavior:
@@ -242,7 +347,9 @@ $defs:
     oneOf:
       - $ref: '#/$defs/nonEmptyString'
       - type: object
-        additionalProperties: false
+        allOf:
+          - $ref: '#/$defs/scopeFilters'
+          - $ref: '#/$defs/scopeNeedsOfClass'
         properties:
           target:
             $ref: '#/$defs/stringOrList'
@@ -251,6 +358,8 @@ $defs:
         anyOf:
           - required: [target]
           - required: [allAssetsOfClass]
+          - $ref: '#/$defs/hasScopeFilter'
+        unevaluatedProperties: false
   resourceNodeType:
     type: string
     pattern: '^(?:EResourceNodeType::)?(?:Node|FrackingSatellite|FrackingCore|Geyser|Deposit)$'
@@ -258,8 +367,11 @@ $defs:
     oneOf:
       - $ref: '#/$defs/nonEmptyString'
       - type: object
-        additionalProperties: false
-        required: [resource]
+        allOf:
+          - $ref: '#/$defs/scopeFilters'
+        anyOf:
+          - required: [resource]
+          - $ref: '#/$defs/hasScopeFilter'
         properties:
           resource:
             $ref: '#/$defs/nonEmptyString'
@@ -273,3 +385,4 @@ $defs:
           removeFromScanner:
             type: boolean
             default: true
+        unevaluatedProperties: false

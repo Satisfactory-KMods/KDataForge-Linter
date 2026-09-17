@@ -23,8 +23,15 @@ Built-in types cannot be replaced unless `--allow-schema-override` is passed exp
 Bundled coverage includes every current KDataForge runtime root, including `sublevel` and
 `resourcenode`. Recipe, schematic, and research documents accept top-level `remove:` in mixed or
 remove-only form; `mam` uses the research schema. CDO selector matches accumulate, so `target`,
-`allAssetsOfClass`, and `matchTag` may coexist when `matchTag` also supplies `ofClass`. Pack
-manifests may carry an optional string `description` for repository/display metadata.
+`allAssetsOfClass`, and an `ofClass` scope may coexist. The shared scope filters (`matchTag`,
+`matchName`, `where`, and the recipe shortcuts `producedIn`, `ingredient`, `product`) are accepted
+by `cdo` patches, `remove:` entries of recipe/schematic/research/resourcenode documents, `sublevel`
+`block:` entries, and `sinkpoints` entries. `matchTag`/`matchName`/`where` require `ofClass` unless
+a recipe shortcut on the same entry supplies the default `FGRecipe` scope. Each `where` clause
+needs a `path` (which may contain `[*]`) plus exactly one operator (`equals`, `notEquals`,
+`lessThan`, `lessOrEqual`, `greaterThan`, `greaterOrEqual`, `contains`, `notContains`, `in`,
+`notIn`, `matches`, `isEmpty`). Pack manifests may carry an optional string `description` for
+repository/display metadata.
 
 Exit codes:
 

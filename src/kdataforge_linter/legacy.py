@@ -388,20 +388,108 @@ class Linter:
         for key, child in value.items():
             self.validate_inline_instances(child, path, f"{context}.{key}")
 
+    WHERE_OPERATORS = (
+        "equals",
+        "notEquals",
+        "lessThan",
+        "lessOrEqual",
+        "greaterThan",
+        "greaterOrEqual",
+        "contains",
+        "notContains",
+        "in",
+        "notIn",
+        "matches",
+        "isEmpty",
+    )
+    NUMERIC_WHERE_OPERATORS = ("lessThan", "lessOrEqual", "greaterThan", "greaterOrEqual")
+    SCOPE_FILTER_KEYS = ("matchTag", "matchName", "where", "producedIn", "ingredient", "product")
+    RECIPE_FILTER_KEYS = ("producedIn", "ingredient", "product")
+
+    def validate_where_clause(self, clause: Any, path: Path, context: str) -> None:
+        if not isinstance(clause, dict):
+            self.error(path, f"{context} must be a map with path and one operator")
+            return
+        clause_path = clause.get("path")
+        if not isinstance(clause_path, str) or not clause_path.strip():
+            self.error(path, f"{context}.path must be a non-empty property path")
+        elif not PROPERTY_PATH.fullmatch(clause_path.replace("[*]", "[0]")):
+            self.error(path, f"{context}.path is not a valid property path")
+        operators = [key for key in clause if key != "path"]
+        for key in operators:
+            if key not in self.WHERE_OPERATORS:
+                self.error(path, f"{context}.{key} is not a where operator")
+        known = [key for key in operators if key in self.WHERE_OPERATORS]
+        if len(known) != 1:
+            self.error(path, f"{context} needs exactly one operator ({', '.join(self.WHERE_OPERATORS)})")
+            return
+        operator = known[0]
+        value = clause[operator]
+        if operator in self.NUMERIC_WHERE_OPERATORS and not self.is_finite_number(value):
+            self.error(path, f"{context}.{operator} must be a finite number")
+        elif operator == "matches" and (not isinstance(value, str) or not value.strip()):
+            self.error(path, f"{context}.matches must be a non-empty wildcard pattern")
+        elif operator == "isEmpty" and not isinstance(value, bool):
+            self.error(path, f"{context}.isEmpty must be a boolean")
+        elif operator in ("in", "notIn") and (value is None or isinstance(value, dict) or value == []):
+            self.error(path, f"{context}.{operator} must be a non-empty sequence of values")
+        elif operator in ("equals", "notEquals", "contains", "notContains") and value is None:
+            self.error(path, f"{context}.{operator} needs a value")
+
+    def validate_scope_filters(
+        self, entry: dict[str, Any], path: Path, context: str, *, has_default_scope: bool = False
+    ) -> bool:
+        """Validate the shared ofClass + filter keys of one selector entry. Returns True when any filter is present.
+
+        has_default_scope: the document type supplies its own base class as the scope (remove: entries,
+        resourcenode entries, sinkpoints entries), so ofClass is optional there.
+        """
+        for key in ("ofClass", "tagProperty"):
+            if key in entry and not isinstance(entry[key], str):
+                self.error(path, f"{context}.{key} must be a string")
+        if "matchAssets" in entry and not isinstance(entry["matchAssets"], bool):
+            self.error(path, f"{context}.matchAssets must be a boolean")
+        for key in ("matchTag", "matchName", *self.RECIPE_FILTER_KEYS):
+            if key not in entry:
+                continue
+            value = entry[key]
+            values = value if isinstance(value, list) else [value]
+            if not values or any(not isinstance(item, str) or not item.strip() for item in values):
+                self.error(path, f"{context}.{key} must be a string or sequence of strings")
+        # matchTag/matchName/where need a scope: ofClass, a recipe shortcut (defaults to FGRecipe), or
+        # the document type's own default scope.
+        has_scope = (
+            has_default_scope or "ofClass" in entry or any(key in entry for key in self.RECIPE_FILTER_KEYS)
+        )
+        for key in ("matchTag", "matchName", "where"):
+            if key in entry and not has_scope:
+                self.error(path, f"{context}.{key} requires ofClass")
+        if "where" in entry:
+            where = entry["where"]
+            clauses = where if isinstance(where, list) else [where]
+            if not clauses:
+                self.error(path, f"{context}.where must not be empty")
+            for index, clause in enumerate(clauses):
+                label = f"{context}.where[{index}]" if isinstance(where, list) else f"{context}.where"
+                self.validate_where_clause(clause, path, label)
+        return any(key in entry for key in self.SCOPE_FILTER_KEYS)
+
     def validate_target(self, patch: dict[str, Any], path: Path, context: str) -> None:
-        selectors = [key for key in ("target", "allAssetsOfClass", "matchTag") if key in patch]
+        selectors = [key for key in ("target", "allAssetsOfClass", *self.SCOPE_FILTER_KEYS) if key in patch]
         if not selectors:
-            self.error(path, f"{context} needs target, allAssetsOfClass, or matchTag")
+            self.error(
+                path,
+                f"{context} needs target, allAssetsOfClass, or an ofClass scope with a filter "
+                "(matchTag, matchName, where, producedIn, ingredient, product)",
+            )
         if "target" in patch:
             target = patch["target"]
             values = target if isinstance(target, list) else [target]
             if not values or any(not isinstance(item, str) or not item.strip() for item in values):
                 self.error(path, f"{context}.target must be a path string or sequence of path strings")
-        for key in ("allAssetsOfClass", "ofClass", "tagProperty"):
-            if key in patch and not isinstance(patch[key], str):
-                self.error(path, f"{context}.{key} must be a string")
-        if "matchTag" in patch and "ofClass" not in patch:
-            self.error(path, f"{context}.matchTag requires ofClass")
+        if "allAssetsOfClass" in patch and not isinstance(patch["allAssetsOfClass"], str):
+            self.error(path, f"{context}.allAssetsOfClass must be a string")
+        self.validate_scope_filters(patch, path, context)
         for key in ("applyToSubclasses", "applyToSpawnedActors", "deferOneGameTick"):
             if key in patch and not isinstance(patch[key], bool):
                 self.error(path, f"{context}.{key} must be a boolean")
@@ -566,8 +654,19 @@ class Linter:
             return False
         valid = True
         for index, removal in enumerate(removals):
+            context = f"{root_type}.remove[{index}]"
+            if isinstance(removal, dict):
+                # Filter form: every class of this type in the (defaulted) scope that passes the filters.
+                if not self.validate_scope_filters(removal, path, context, has_default_scope=True):
+                    self.error(
+                        path,
+                        f"{context} map entries need a filter (matchTag, matchName, where, producedIn, "
+                        "ingredient, product); a bare class reference removes one class",
+                    )
+                    valid = False
+                continue
             if not isinstance(removal, str) or not removal.strip():
-                self.error(path, f"{root_type}.remove[{index}] must be a bare non-empty class reference")
+                self.error(path, f"{context} must be a class reference or a filter map")
                 valid = False
         return valid
 
@@ -595,8 +694,12 @@ class Linter:
                     has_path = True
                 else:
                     self.error(path, f"{context}.allAssetsOfClass must be a non-empty string")
+            if self.validate_scope_filters(entry, path, context):
+                has_path = True
+                if "ofClass" not in entry:
+                    self.error(path, f"{context} filters require ofClass (sublevel assets have no default scope)")
             if not has_path:
-                self.error(path, f"{context} needs target or allAssetsOfClass")
+                self.error(path, f"{context} needs target, allAssetsOfClass, or an ofClass scope with filters")
 
     def validate_resourcenode_document(self, document: dict[str, Any], path: Path) -> None:
         removals = self.require_sequence(document, "remove", path, "resourcenode")
@@ -610,7 +713,10 @@ class Linter:
                 self.error(path, f"{context} must be a resource class reference or mapping")
                 continue
             resource = entry.get("resource")
-            if not isinstance(resource, str) or not resource.strip():
+            has_filter = self.validate_scope_filters(entry, path, context, has_default_scope=True)
+            if resource is None and not has_filter:
+                self.error(path, f"{context} needs resource, or a filter selecting several resource descriptors")
+            elif resource is not None and (not isinstance(resource, str) or not resource.strip()):
                 self.error(path, f"{context}.resource must be a non-empty resource descriptor class reference")
             if "nodeTypes" in entry:
                 node_types = entry["nodeTypes"]
@@ -808,12 +914,15 @@ class Linter:
             entries = self.require_sequence(mapping, "entries", path, "sinkpoints")
             if entries:
                 for i, entry in enumerate(entries):
-                    if (
-                        not isinstance(entry, dict)
-                        or not isinstance(entry.get("item"), str)
-                        or not entry["item"].strip()
-                    ):
+                    if not isinstance(entry, dict):
                         self.error(path, f"sinkpoints.entries[{i}] requires item")
+                    elif "item" in entry:
+                        if not isinstance(entry["item"], str) or not entry["item"].strip():
+                            self.error(path, f"sinkpoints.entries[{i}] requires item")
+                    elif not self.validate_scope_filters(
+                        entry, path, f"sinkpoints.entries[{i}]", has_default_scope=True
+                    ):
+                        self.error(path, f"sinkpoints.entries[{i}] requires item or a filter selecting several items")
                     points = entry.get("points") if isinstance(entry, dict) else None
                     if isinstance(points, bool) or not isinstance(points, int):
                         self.error(path, f"sinkpoints.entries[{i}].points must be integer")

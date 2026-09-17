@@ -268,8 +268,10 @@ def test_content_root_rejects_empty_or_nonsequence_entries_without_remove(
     [
         ("[]", "$.remove", "minItems"),
         ("not-a-sequence", "$.remove", "type"),
-        ("\n  - ''", "$.remove[0]", "minLength"),
-        ("\n  - {class: /Game/FactoryGame/Example.Example_C}", "$.remove[0]", "type"),
+        # `remove:` entries are a class reference OR a filter map (oneOf), so a malformed entry is
+        # reported against the alternation.
+        ("\n  - ''", "$.remove[0]", "oneOf"),
+        ("\n  - {class: /Game/FactoryGame/Example.Example_C}", "$.remove[0]", "oneOf"),
     ],
 )
 def test_content_removal_rejects_non_scalar_or_empty_references(
