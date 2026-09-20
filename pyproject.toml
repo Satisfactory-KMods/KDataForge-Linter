@@ -16,7 +16,7 @@ gui = ["PySide6>=6.8,<7"]
 
 [dependency-groups]
 dev = [
-  "mypy>=1.15,<2",
+  "mypy>=2.3,<3",
   "pyinstaller>=6.12,<7",
   "pytest>=8.3,<9",
   "pytest-cov>=6.0,<7",
