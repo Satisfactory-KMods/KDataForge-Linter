@@ -52,6 +52,7 @@ CURVE_EXTRAPOLATION_MODES = {"none", "constant", "linear", "cycle", "cyclewithof
 OPS = {
     "add",
     "append",
+    "append_unique",
     "clamp",
     "clear",
     "copy",
@@ -76,6 +77,7 @@ OPS = {
 OP_REQUIRED = {
     "add": {"value"},
     "append": {"value"},
+    "append_unique": {"value"},
     "clamp": {"min", "max"},
     "copy": {"from"},
     "divide": {"value"},
@@ -370,6 +372,10 @@ class Linter:
             ):
                 self.error(path, f"{label}.from is not a valid property path")
             if "value" in operation:
+                if op.casefold() == "append_unique":
+                    elements = operation["value"] if isinstance(operation["value"], list) else [operation["value"]]
+                    if any(isinstance(element, dict) and "class" in element for element in elements):
+                        self.error(path, f"{label}: append_unique compares object identity; inline instanced objects require append")
                 self.validate_inline_instances(operation["value"], path, f"{label}.value")
 
     def validate_inline_instances(self, value: Any, path: Path, context: str) -> None:
@@ -833,9 +839,9 @@ class Linter:
                 if not isinstance(include, str) or not include.strip():
                     self.error(path, "include entries must be non-empty strings")
                     continue
-                target = (path.parent / include).resolve()
-                if self.root not in target.parents and target != self.root:
-                    self.error(path, f"include escapes DataForge root: {include}")
+                target = (pack_root / include).resolve()
+                if pack_root not in target.parents and target != pack_root:
+                    self.error(path, f"include escapes pack root: {include}")
                 elif not target.is_file():
                     self.error(path, f"include does not exist: {include}")
         pack_data = self.manifests.get(pack_root)

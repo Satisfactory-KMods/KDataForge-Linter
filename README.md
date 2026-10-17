@@ -33,6 +33,11 @@ needs a `path` (which may contain `[*]`) plus exactly one operator (`equals`, `n
 `notIn`, `matches`, `isEmpty`). Pack manifests may carry an optional string `description` for
 repository/display metadata.
 
+`include:` paths resolve relative to the enclosing pack's directory (the folder containing
+`pack.yml`), including when the referring document is nested. Includes cannot leave that pack.
+The `append_unique` operation requires `value` and appends missing array values. Inline instanced
+objects compare by identity and must use `append` instead.
+
 Exit codes:
 
 | Code | Meaning |

@@ -187,6 +187,7 @@ $defs:
         enum:
           - add
           - append
+          - append_unique
           - clamp
           - clear
           - copy
