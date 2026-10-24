@@ -16,6 +16,17 @@ $defs:
         items:
           $ref: '#/$defs/nonEmptyString'
   # One `where:` filter clause: a property path (may contain `[*]`) plus exactly one operator.
+  classExclusion:
+    type: string
+    minLength: 1
+    pattern: '^\s*(?:/.*|[^*?]+)$'
+  classExclusions:
+    oneOf:
+      - $ref: '#/$defs/classExclusion'
+      - type: array
+        minItems: 1
+        items:
+          $ref: '#/$defs/classExclusion'
   whereClause:
     type: object
     additionalProperties: false
@@ -76,6 +87,8 @@ $defs:
       matchAssets: { type: boolean, default: true }
       matchName:
         $ref: '#/$defs/stringOrList'
+      excludeClasses:
+        $ref: '#/$defs/classExclusions'
       producedIn:
         $ref: '#/$defs/stringOrList'
       ingredient:
@@ -98,6 +111,7 @@ $defs:
       anyOf:
         - required: [matchTag]
         - required: [matchName]
+        - required: [excludeClasses]
         - required: [where]
     then:
       anyOf:
@@ -109,6 +123,7 @@ $defs:
     anyOf:
       - required: [matchTag]
       - required: [matchName]
+      - required: [excludeClasses]
       - required: [where]
       - required: [producedIn]
       - required: [ingredient]

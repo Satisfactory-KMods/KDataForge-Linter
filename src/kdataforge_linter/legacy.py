@@ -409,7 +409,7 @@ class Linter:
         "isEmpty",
     )
     NUMERIC_WHERE_OPERATORS = ("lessThan", "lessOrEqual", "greaterThan", "greaterOrEqual")
-    SCOPE_FILTER_KEYS = ("matchTag", "matchName", "where", "producedIn", "ingredient", "product")
+    SCOPE_FILTER_KEYS = ("matchTag", "matchName", "excludeClasses", "where", "producedIn", "ingredient", "product")
     RECIPE_FILTER_KEYS = ("producedIn", "ingredient", "product")
 
     def validate_where_clause(self, clause: Any, path: Path, context: str) -> None:
@@ -455,19 +455,23 @@ class Linter:
                 self.error(path, f"{context}.{key} must be a string")
         if "matchAssets" in entry and not isinstance(entry["matchAssets"], bool):
             self.error(path, f"{context}.matchAssets must be a boolean")
-        for key in ("matchTag", "matchName", *self.RECIPE_FILTER_KEYS):
+        for key in ("matchTag", "matchName", "excludeClasses", *self.RECIPE_FILTER_KEYS):
             if key not in entry:
                 continue
             value = entry[key]
             values = value if isinstance(value, list) else [value]
             if not values or any(not isinstance(item, str) or not item.strip() for item in values):
                 self.error(path, f"{context}.{key} must be a string or sequence of strings")
+            elif key == "excludeClasses":
+                for item in values:
+                    if any(char in item for char in "*?") and not item.strip().startswith("/"):
+                        self.error(path, f"{context}.{key} wildcard patterns must start with '/'")
         # matchTag/matchName/where need a scope: ofClass, a recipe shortcut (defaults to FGRecipe), or
         # the document type's own default scope.
         has_scope = (
             has_default_scope or "ofClass" in entry or any(key in entry for key in self.RECIPE_FILTER_KEYS)
         )
-        for key in ("matchTag", "matchName", "where"):
+        for key in ("matchTag", "matchName", "excludeClasses", "where"):
             if key in entry and not has_scope:
                 self.error(path, f"{context}.{key} requires ofClass")
         if "where" in entry:
@@ -708,6 +712,26 @@ class Linter:
                 self.error(path, f"{context} needs target, allAssetsOfClass, or an ofClass scope with filters")
 
     def validate_resourcenode_document(self, document: dict[str, Any], path: Path) -> None:
+        resources: set[str] = set()
+        for index, entry in enumerate(document.get("visuals", []) if isinstance(document.get("visuals", []), list) else []):
+            if not isinstance(entry, dict):
+                continue
+            resource = entry.get("resource")
+            if isinstance(resource, str):
+                identity = resource.strip().casefold()
+                if identity in resources:
+                    self.error(path, f"resourcenode.visuals[{index}].resource must be unique")
+                resources.add(identity)
+            slots: set[int | float] = set()
+            materials = entry.get("materials", [])
+            for slot in materials if isinstance(materials, list) else []:
+                number = slot.get("slot") if isinstance(slot, dict) else None
+                if isinstance(number, (int, float)) and not isinstance(number, bool):
+                    if number in slots:
+                        self.error(path, f"resourcenode.visuals[{index}] material slots must be unique")
+                    slots.add(number)
+        if "remove" not in document:
+            return
         removals = self.require_sequence(document, "remove", path, "resourcenode")
         if removals is None:
             return
